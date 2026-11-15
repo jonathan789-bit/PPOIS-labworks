@@ -9,6 +9,8 @@ on:
 jobs:
   build-test-and-release:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout code
@@ -76,3 +78,15 @@ jobs:
       with:
         name: Lab1-Executables
         path: release_artifacts/
+
+    # ---------------------------------------------------------
+    # CREATE GITHUB RELEASE
+    # ---------------------------------------------------------
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.0.${{ github.run_number }}
+        name: Lab1 Release v1.0.${{ github.run_number }}
+        draft: false
+        prerelease: false
+        files: release_artifacts/*
