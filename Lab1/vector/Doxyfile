@@ -1,0 +1,13 @@
+# Doxyfile for Vector Project
+PROJECT_NAME           = "PPOIS Lab 1 - Vector"
+PROJECT_BRIEF          = "A custom C++ implementation of a 3D mathematical vector class."
+OUTPUT_DIRECTORY       = docs
+INPUT                  = src include
+RECURSIVE              = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = YES

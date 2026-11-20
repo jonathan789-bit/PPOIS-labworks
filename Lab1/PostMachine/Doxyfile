@@ -1,0 +1,13 @@
+# Doxyfile for PostMachine Project
+PROJECT_NAME           = "PPOIS Lab 1 - PostMachine"
+PROJECT_BRIEF          = "A C++ implementation of a Post Machine simulator."
+OUTPUT_DIRECTORY       = docs
+INPUT                  = src include
+RECURSIVE              = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = YES
