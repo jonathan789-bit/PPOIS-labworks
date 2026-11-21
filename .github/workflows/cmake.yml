@@ -65,13 +65,13 @@ jobs:
         path: ${{ github.workspace }}/Lab1/vector/build/coverage.xml
 
     # ---------------------------------------------------------
-    # PACKAGE EXECUTABLES INTO A ZIP FOLDER
+    # PACKAGE EXECUTABLES INTO A ZIP FOLDER (WITH .EXE EXTENSION)
     # ---------------------------------------------------------
     - name: Package Executables into Folder and Zip
       run: |
         mkdir Lab1-Release
-        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Debug\PostMachineApp.exe" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
-        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Debug\VectorApp.exe" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
+        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Debug\PostMachineApp.exe" -Destination "Lab1-Release/PostMachineApp.exe"
+        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Debug\VectorApp.exe" -Destination "Lab1-Release/VectorApp.exe"
         Compress-Archive -Path "Lab1-Release" -DestinationPath "Lab1-Release.zip"
 
     # ---------------------------------------------------------
