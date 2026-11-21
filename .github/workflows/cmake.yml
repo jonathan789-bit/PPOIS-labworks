@@ -65,22 +65,17 @@ jobs:
         path: ${{ github.workspace }}/Lab1/vector/build/coverage.xml
 
     # ---------------------------------------------------------
-    # RELEASE ARTIFACT
+    # PACKAGE EXECUTABLES INTO A ZIP FOLDER
     # ---------------------------------------------------------
-    - name: Package Executables
+    - name: Package Executables into Folder and Zip
       run: |
-        mkdir release_artifacts
-        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Debug\PostMachineApp.exe" -Destination "release_artifacts/" -ErrorAction SilentlyContinue
-        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Debug\VectorApp.exe" -Destination "release_artifacts/" -ErrorAction SilentlyContinue
-
-    - name: Upload Release Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: Lab1-Executables
-        path: release_artifacts/
+        mkdir Lab1-Release
+        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Debug\PostMachineApp.exe" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
+        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Debug\VectorApp.exe" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
+        Compress-Archive -Path "Lab1-Release" -DestinationPath "Lab1-Release.zip"
 
     # ---------------------------------------------------------
-    # CREATE GITHUB RELEASE
+    # CREATE GITHUB RELEASE WITH ZIP FILE
     # ---------------------------------------------------------
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -89,4 +84,4 @@ jobs:
         name: Lab1 Release v1.0.${{ github.run_number }}
         draft: false
         prerelease: false
-        files: release_artifacts/*
+        files: Lab1-Release.zip
