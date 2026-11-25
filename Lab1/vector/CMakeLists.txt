@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(VectorProject)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # --- Google Test Setup ---
 # GoogleTest requires at least C++14 (or 17 for newer versions)
