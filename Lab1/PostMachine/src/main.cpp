@@ -1,12 +1,11 @@
 #include "command.h"
-#include "command.h"
 #include <iostream>
 #include <vector>
 
 int main()
 {
-    // Use PostOp instead of PostInstruction
-      std::vector<PostInstruction> program =
+    // Define a simple program
+    std::vector<PostInstruction> program =
     {
         { PostOp::Write1 },
         { PostOp::MoveRight },
@@ -18,12 +17,16 @@ int main()
 
     PostMachine machine(program);
 
-    // Note: Change the run() arguments if your PostMachine.h expects different ones
+    // Run the machine (limit to 100 steps)
     auto result = machine.run(100); 
 
     std::cout << "Program finished\n";
     std::cout << "Steps executed: " << result.steps << '\n';
     std::cout << "Halted: " << std::boolalpha << result.halted << '\n';
+
+    // Pause so the window doesn't close immediately
+    std::cout << "\nPress Enter to exit...";
+    std::cin.get();
 
     return 0;
 }
