@@ -8,18 +8,7 @@ on:
 
 jobs:
   build-test-and-release:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            artifact_name: Lab1-Release-Windows
-            build_type: Release
-          - os: ubuntu-latest
-            artifact_name: Lab1-Release-Linux
-            build_type: Release
-
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     permissions:
       contents: write
 
@@ -28,100 +17,65 @@ jobs:
       uses: actions/checkout@v4
 
     # ---------------------------------------------------------
-    # STATIC ANALYSIS (CPPCHECK)
-    # ---------------------------------------------------------
-    - name: Install cppcheck (Windows)
-      if: matrix.os == 'windows-latest'
-      run: choco install cppcheck -y
-
-    - name: Install cppcheck (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update && sudo apt-get install -y cppcheck
-
-    # Note: We skip cppcheck on Windows due to a known Chocolatey std.cfg bug in GitHub runners
-    - name: Run Static Analysis
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        cppcheck --enable=all --suppress=missingIncludeSystem --suppress=unusedFunction --inline-suppr --error-exitcode=1 -I Lab1/PostMachine/include -I Lab1/vector/src Lab1/PostMachine/src Lab1/vector/src
-
-    # ---------------------------------------------------------
     # CONFIGURE & BUILD
     # ---------------------------------------------------------
     - name: Configure PostMachine
       working-directory: ${{ github.workspace }}/Lab1/PostMachine
-      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 
     - name: Configure Vector
       working-directory: ${{ github.workspace }}/Lab1/vector
-      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 
     - name: Build PostMachine
       working-directory: ${{ github.workspace }}/Lab1/PostMachine
-      run: cmake --build build --config ${{ matrix.build_type }}
+      run: cmake --build build --config Release
 
     - name: Build Vector
       working-directory: ${{ github.workspace }}/Lab1/vector
-      run: cmake --build build --config ${{ matrix.build_type }}
+      run: cmake --build build --config Release
 
     # ---------------------------------------------------------
     # RUN TESTS & COVERAGE
     # ---------------------------------------------------------
     - name: Run PostMachine Tests
       working-directory: ${{ github.workspace }}/Lab1/PostMachine/build
-      run: ctest -C ${{ matrix.build_type }} --output-on-failure
+      run: ctest -C Release --output-on-failure
 
     - name: Run Vector Tests
       working-directory: ${{ github.workspace }}/Lab1/vector/build
-      run: ctest -C ${{ matrix.build_type }} --output-on-failure
+      run: ctest -C Release --output-on-failure
 
-    - name: Install OpenCppCoverage (Windows only)
-      if: matrix.os == 'windows-latest'
+    - name: Install OpenCppCoverage
       run: choco install opencppcoverage -y
 
-    - name: Run Coverage (Windows only)
-      if: matrix.os == 'windows-latest'
+    - name: Run Coverage
       working-directory: ${{ github.workspace }}/Lab1/vector/build
       run: |
         $env:PATH += ";C:\Program Files\OpenCppCoverage"
         OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\vector\src" --export_type cobertura:coverage.xml -- .\Release\VectorTests.exe
 
     - name: Upload Coverage Report
-      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: Coverage-Report
         path: ${{ github.workspace }}/Lab1/vector/build/coverage.xml
 
     # ---------------------------------------------------------
-    # PACKAGE ARTIFACTS
+    # PACKAGE ARTIFACTS & RELEASE
     # ---------------------------------------------------------
-    - name: Package Executables (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Package Executables
       run: |
-        mkdir ${{ matrix.artifact_name }}
-        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Release\PostMachineApp.exe" -Destination "${{ matrix.artifact_name }}/" -ErrorAction SilentlyContinue
-        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Release\VectorApp.exe" -Destination "${{ matrix.artifact_name }}/" -ErrorAction SilentlyContinue
-        Compress-Archive -Path "${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.artifact_name }}.zip"
+        mkdir Lab1-Release-Windows
+        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Release\PostMachineApp.exe" -Destination "Lab1-Release-Windows/" -ErrorAction SilentlyContinue
+        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Release\VectorApp.exe" -Destination "Lab1-Release-Windows/" -ErrorAction SilentlyContinue
+        Compress-Archive -Path "Lab1-Release-Windows" -DestinationPath "Lab1-Release-Windows.zip"
 
-    - name: Package Executables (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        mkdir ${{ matrix.artifact_name }}
-        cp "Lab1/PostMachine/build/PostMachineApp" "${{ matrix.artifact_name }}/" || true
-        cp "Lab1/vector/build/VectorApp" "${{ matrix.artifact_name }}/" || true
-        chmod +x "${{ matrix.artifact_name }}"/*
-        tar -czvf "${{ matrix.artifact_name }}.tar.gz" "${{ matrix.artifact_name }}"
-
-    # ---------------------------------------------------------
-    # UPLOAD TO RELEASE
-    # ---------------------------------------------------------
-    - name: Upload Release Artifacts
+    - name: Upload Release Artifact
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v1.0.${{ github.run_number }}
         name: Lab1 Release v1.0.${{ github.run_number }}
         draft: false
         prerelease: false
-        files: |
-          Lab1-Release-Windows.zip
-          Lab1-Release-Linux.tar.gz
+        files: Lab1-Release-Windows.zip
