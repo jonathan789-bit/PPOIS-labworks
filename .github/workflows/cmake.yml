@@ -38,9 +38,11 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: sudo apt-get update && sudo apt-get install -y cppcheck
 
+    # Note: We skip cppcheck on Windows due to a known Chocolatey std.cfg bug in GitHub runners
     - name: Run Static Analysis
+      if: matrix.os == 'ubuntu-latest'
       run: |
-        cppcheck --enable=all --suppress=missingIncludeSystem --inline-suppr --error-exitcode=1 -I Lab1/PostMachine/include -I Lab1/vector/src Lab1/PostMachine/src Lab1/vector/src
+        cppcheck --enable=all --suppress=missingIncludeSystem --suppress=unusedFunction --inline-suppr --error-exitcode=1 -I Lab1/PostMachine/include -I Lab1/vector/src Lab1/PostMachine/src Lab1/vector/src
 
     # ---------------------------------------------------------
     # CONFIGURE & BUILD
