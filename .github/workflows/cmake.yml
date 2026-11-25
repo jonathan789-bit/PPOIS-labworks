@@ -8,7 +8,20 @@ on:
 
 jobs:
   build-test-and-release:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: Lab1-Release-Windows
+            executable_path: "Lab1/PostMachine/build/Release/PostMachineApp.exe;Lab1/vector/build/Release/VectorApp.exe"
+            build_type: Release
+          - os: ubuntu-latest
+            artifact_name: Lab1-Release-Linux
+            executable_path: "Lab1/PostMachine/build/PostMachineApp;Lab1/vector/build/VectorApp"
+            build_type: Release
+
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
 
@@ -17,79 +30,80 @@ jobs:
       uses: actions/checkout@v4
 
     # ---------------------------------------------------------
-    # BUILD POSTMACHINE (Release Config)
+    # WINDOWS SPECIFIC SETUP (Static Runtime)
     # ---------------------------------------------------------
-    - name: Configure PostMachine
+    - name: Configure PostMachine (Windows)
+      if: matrix.os == 'windows-latest'
       working-directory: ${{ github.workspace }}/Lab1/PostMachine
-      run: cmake -B build -S .
+      run: cmake -B build -S . -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
 
+    - name: Configure Vector (Windows)
+      if: matrix.os == 'windows-latest'
+      working-directory: ${{ github.workspace }}/Lab1/vector
+      run: cmake -B build -S . -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
+
+    # ---------------------------------------------------------
+    # LINUX SPECIFIC SETUP (Standard Build)
+    # ---------------------------------------------------------
+    - name: Configure PostMachine (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      working-directory: ${{ github.workspace }}/Lab1/PostMachine
+      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: Configure Vector (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      working-directory: ${{ github.workspace }}/Lab1/vector
+      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    # ---------------------------------------------------------
+    # BUILD AND TEST (Runs on both OS)
+    # ---------------------------------------------------------
     - name: Build PostMachine
       working-directory: ${{ github.workspace }}/Lab1/PostMachine
-      run: cmake --build build --config Release
+      run: cmake --build build --config ${{ matrix.build_type }}
 
     - name: Run PostMachine Tests
       working-directory: ${{ github.workspace }}/Lab1/PostMachine/build
-      run: ctest -C Release --output-on-failure
-
-    # ---------------------------------------------------------
-    # BUILD VECTOR (Release Config)
-    # ---------------------------------------------------------
-    - name: Configure Vector
-      working-directory: ${{ github.workspace }}/Lab1/vector
-      run: cmake -B build -S .
+      run: ctest -C ${{ matrix.build_type }} --output-on-failure
 
     - name: Build Vector
       working-directory: ${{ github.workspace }}/Lab1/vector
-      run: cmake --build build --config Release
+      run: cmake --build build --config ${{ matrix.build_type }}
 
     - name: Run Vector Tests
       working-directory: ${{ github.workspace }}/Lab1/vector/build
-      run: ctest -C Release --output-on-failure
+      run: ctest -C ${{ matrix.build_type }} --output-on-failure
 
     # ---------------------------------------------------------
-    # COVERAGE CHECK (Using OpenCppCoverage)
+    # PACKAGE ARTIFACTS (Dynamic based on OS)
     # ---------------------------------------------------------
-    - name: Install OpenCppCoverage
-      run: choco install opencppcoverage -y
-
-    - name: Run Vector Tests with Coverage
-      working-directory: ${{ github.workspace }}/Lab1/vector/build
+    - name: Package Executables (Windows)
+      if: matrix.os == 'windows-latest'
       run: |
-        $env:PATH += ";C:\Program Files\OpenCppCoverage"
-        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\vector\src" --export_type cobertura:coverage.xml -- .\Release\VectorTests.exe
+        mkdir ${{ matrix.artifact_name }}
+        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Release\PostMachineApp.exe" -Destination "${{ matrix.artifact_name }}/" -ErrorAction SilentlyContinue
+        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Release\VectorApp.exe" -Destination "${{ matrix.artifact_name }}/" -ErrorAction SilentlyContinue
+        Compress-Archive -Path "${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.artifact_name }}.zip"
 
-    - name: Upload Coverage Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: Coverage-Report
-        path: ${{ github.workspace }}/Lab1/vector/build/coverage.xml
-
-    # ---------------------------------------------------------
-    # PACKAGE EXECUTABLES INTO A ZIP FOLDER
-    # ---------------------------------------------------------
-    - name: Package Executables into Folder and Zip
+    - name: Package Executables (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
-        mkdir Lab1-Release
-        # Copy the Release executables
-        Copy-Item -Path "${{ github.workspace }}\Lab1\PostMachine\build\Release\PostMachineApp.exe" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
-        Copy-Item -Path "${{ github.workspace }}\Lab1\vector\build\Release\VectorApp.exe" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
-        
-        # Copy the standard Release C++ Runtime DLLs
-        Copy-Item -Path "C:\Windows\System32\msvcp140.dll" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
-        Copy-Item -Path "C:\Windows\System32\vcruntime140.dll" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
-        Copy-Item -Path "C:\Windows\System32\vcruntime140_1.dll" -Destination "Lab1-Release/" -ErrorAction SilentlyContinue
-        
-        # Zip the folder
-        Compress-Archive -Path "Lab1-Release" -DestinationPath "Lab1-Release.zip"
+        mkdir ${{ matrix.artifact_name }}
+        cp "Lab1/PostMachine/build/PostMachineApp" "${{ matrix.artifact_name }}/" || true
+        cp "Lab1/vector/build/VectorApp" "${{ matrix.artifact_name }}/" || true
+        chmod +x "${{ matrix.artifact_name }}"/*
+        tar -czvf "${{ matrix.artifact_name }}.tar.gz" "${{ matrix.artifact_name }}"
 
     # ---------------------------------------------------------
-    # CREATE GITHUB RELEASE WITH ZIP FILE
+    # UPLOAD TO RELEASE (Both OS)
     # ---------------------------------------------------------
-    - name: Create Release
+    - name: Upload Release Artifacts
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v1.0.${{ github.run_number }}
         name: Lab1 Release v1.0.${{ github.run_number }}
         draft: false
         prerelease: false
-        files: Lab1-Release.zip
+        files: |
+          ${{ matrix.artifact_name }}.zip
+          ${{ matrix.artifact_name }}.tar.gz
