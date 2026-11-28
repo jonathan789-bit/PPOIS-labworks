@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v4
 
     # ---------------------------------------------------------
-    # CONFIGURE & BUILD
+    # CONFIGURE
     # ---------------------------------------------------------
     - name: Configure PostMachine
       working-directory: ${{ github.workspace }}/Lab1/PostMachine
@@ -27,13 +27,27 @@ jobs:
       working-directory: ${{ github.workspace }}/Lab1/vector
       run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 
-    - name: Build PostMachine
+    # ---------------------------------------------------------
+    # BUILD (RELEASE FOR ARTIFACTS)
+    # ---------------------------------------------------------
+    - name: Build PostMachine (Release)
       working-directory: ${{ github.workspace }}/Lab1/PostMachine
       run: cmake --build build --config Release
 
-    - name: Build Vector
+    - name: Build Vector (Release)
       working-directory: ${{ github.workspace }}/Lab1/vector
       run: cmake --build build --config Release
+
+    # ---------------------------------------------------------
+    # BUILD (DEBUG FOR COVERAGE)
+    # ---------------------------------------------------------
+    - name: Build PostMachine (Debug)
+      working-directory: ${{ github.workspace }}/Lab1/PostMachine
+      run: cmake --build build --config Debug
+
+    - name: Build Vector (Debug)
+      working-directory: ${{ github.workspace }}/Lab1/vector
+      run: cmake --build build --config Debug
 
     # ---------------------------------------------------------
     # RUN TESTS
@@ -47,7 +61,7 @@ jobs:
       run: ctest -C Release --output-on-failure
 
     # ---------------------------------------------------------
-    # COVERAGE (Both Projects)
+    # COVERAGE (Using Debug builds)
     # ---------------------------------------------------------
     - name: Install OpenCppCoverage
       run: choco install opencppcoverage -y
@@ -56,13 +70,13 @@ jobs:
       working-directory: ${{ github.workspace }}/Lab1/vector/build
       run: |
         $env:PATH += ";C:\Program Files\OpenCppCoverage"
-        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\vector\src" --export_type cobertura:coverage_vector.xml -- .\Release\VectorTests.exe
+        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\vector\src" --export_type cobertura:coverage_vector.xml -- .\Debug\VectorTests.exe
 
     - name: Run PostMachine Coverage
       working-directory: ${{ github.workspace }}/Lab1/PostMachine/build
       run: |
         $env:PATH += ";C:\Program Files\OpenCppCoverage"
-        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\PostMachine\src" --sources "${{ github.workspace }}\Lab1\PostMachine\include" --export_type cobertura:coverage_postmachine.xml -- .\Release\PostMachineTests.exe
+        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\PostMachine\src" --sources "${{ github.workspace }}\Lab1\PostMachine\include" --export_type cobertura:coverage_postmachine.xml -- .\Debug\PostMachineTests.exe
 
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
@@ -73,7 +87,7 @@ jobs:
           ${{ github.workspace }}/Lab1/PostMachine/build/coverage_postmachine.xml
 
     # ---------------------------------------------------------
-    # PACKAGE ARTIFACTS & RELEASE
+    # PACKAGE ARTIFACTS & RELEASE (Using Release builds)
     # ---------------------------------------------------------
     - name: Package Executables
       run: |
