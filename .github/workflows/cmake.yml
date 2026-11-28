@@ -36,7 +36,7 @@ jobs:
       run: cmake --build build --config Release
 
     # ---------------------------------------------------------
-    # RUN TESTS & COVERAGE
+    # RUN TESTS
     # ---------------------------------------------------------
     - name: Run PostMachine Tests
       working-directory: ${{ github.workspace }}/Lab1/PostMachine/build
@@ -46,20 +46,31 @@ jobs:
       working-directory: ${{ github.workspace }}/Lab1/vector/build
       run: ctest -C Release --output-on-failure
 
+    # ---------------------------------------------------------
+    # COVERAGE (Both Projects)
+    # ---------------------------------------------------------
     - name: Install OpenCppCoverage
       run: choco install opencppcoverage -y
 
-    - name: Run Coverage
+    - name: Run Vector Coverage
       working-directory: ${{ github.workspace }}/Lab1/vector/build
       run: |
         $env:PATH += ";C:\Program Files\OpenCppCoverage"
-        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\vector\src" --export_type cobertura:coverage.xml -- .\Release\VectorTests.exe
+        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\vector\src" --export_type cobertura:coverage_vector.xml -- .\Release\VectorTests.exe
 
-    - name: Upload Coverage Report
+    - name: Run PostMachine Coverage
+      working-directory: ${{ github.workspace }}/Lab1/PostMachine/build
+      run: |
+        $env:PATH += ";C:\Program Files\OpenCppCoverage"
+        OpenCppCoverage.exe --sources "${{ github.workspace }}\Lab1\PostMachine\src" --sources "${{ github.workspace }}\Lab1\PostMachine\include" --export_type cobertura:coverage_postmachine.xml -- .\Release\PostMachineTests.exe
+
+    - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
       with:
-        name: Coverage-Report
-        path: ${{ github.workspace }}/Lab1/vector/build/coverage.xml
+        name: Coverage-Reports
+        path: |
+          ${{ github.workspace }}/Lab1/vector/build/coverage_vector.xml
+          ${{ github.workspace }}/Lab1/PostMachine/build/coverage_postmachine.xml
 
     # ---------------------------------------------------------
     # PACKAGE ARTIFACTS & RELEASE
